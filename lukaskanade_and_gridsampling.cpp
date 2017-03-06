@@ -171,8 +171,8 @@ int main( int argc, char** argv )
         // }
 
         needToInit = false;
-        transpose(image, image);
-        flip(image, image , 1);
+        // transpose(image, image);
+        // flip(image, image , 1);
         imshow("LK Demo", image);
 
         char c = (char)waitKey(10);
