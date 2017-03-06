@@ -4,6 +4,7 @@
 #include <opencv2/nonfree/nonfree.hpp>
 #include "opencv2/highgui/highgui.hpp"
 
+
 #include <iostream>
 #include <ctype.h>
 #include <time.h>
@@ -64,6 +65,7 @@ int main( int argc, char** argv )
     int iterator_count = 0;
     for(;;)
     {
+
         Mat frame;
         cap >> frame;
         if( frame.empty() )
@@ -105,8 +107,8 @@ int main( int argc, char** argv )
             addRemovePt = false;
             int final_size = new_points.size() + points[1].size();
             points[1].insert(points[1].end(), new_points.begin(), new_points.end());
-            // cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
-            points[1].resize(final_size);
+            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+            // points[1].resize(final_size);
             cout<<"Added points size "<<new_points.size()<<". Final size of feature points "<<points[1].size()<<endl;
             increase_points = false;
         }
@@ -122,7 +124,7 @@ int main( int argc, char** argv )
             foreground.clear();
             for (int i = 0; i < points[0].size(); ++i)
             {
-                if(norm(points[0][i] - points[1][i])>1)
+                if(norm(points[0][i] - points[1][i])>1.5)
                     foreground.push_back(true);
                 else
                     foreground.push_back(false);
