@@ -16,14 +16,14 @@ using namespace std;
 Point2f point;
 bool addRemovePt = false;
 
-static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
-{
-    if( event == CV_EVENT_LBUTTONDOWN )
-    {
-        point = Point2f((float)x, (float)y);
-        addRemovePt = true;
-    }
-}
+// static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
+// {
+//     if( event == CV_EVENT_LBUTTONDOWN )
+//     {
+//         point = Point2f((float)x, (float)y);
+//         addRemovePt = true;
+//     }
+// }
 
 int main( int argc, char** argv )
 {
@@ -63,11 +63,13 @@ int main( int argc, char** argv )
     vector<Point2f> new_points;
     bool increase_points = false;
     int iterator_count = 0;
+    
     for(;;)
     {
-
         Mat frame;
         cap >> frame;
+        Size reduced_size(640,480);
+        cv::resize(frame, frame, reduced_size);
         if( frame.empty() )
             break;
 
@@ -82,7 +84,7 @@ int main( int argc, char** argv )
         {
             // automatic initialization
             cout<<"initialization ========================================"<<endl;
-            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 3, Mat(), 3, 0, 0.04);
+            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 2, Mat(), 3, 0, 0.04);
             cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
             addRemovePt = false;
             cout<<"New size of feature points "<<points[1].size()<<endl;
@@ -131,19 +133,19 @@ int main( int argc, char** argv )
             }
             for( i = k = 0; i < points[1].size(); i++ )
             {
-                if( addRemovePt )
-                {
-                    if( norm(point - points[1][i]) <= 5 )
-                    {
-                        addRemovePt = false;
-                        continue;
-                    }
-                }
+                // if( addRemovePt )
+                // {
+                //     if( norm(point - points[1][i]) <= 5 )
+                //     {
+                //         addRemovePt = false;
+                //         continue;
+                //     }
+                // }
 
-                if( !status[i] )
-                    continue;
+                // if( !status[i] )
+                //     continue;
 
-                points[1][k++] = points[1][i];
+                // points[1][k++] = points[1][i];
                 
              //    if(color == 0)
 	            //     circle( image, points[1][i], 3, Scalar(255,0,0), -1, 8);
@@ -156,19 +158,21 @@ int main( int argc, char** argv )
                 else
                     circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
             }
-            points[1].resize(k);
+            // points[1].resize(k);
         }
 
-        if( addRemovePt && points[1].size() < (size_t)MAX_COUNT )
-        {
-            vector<Point2f> tmp;
-            tmp.push_back(point);
-            cornerSubPix( gray, tmp, winSize, cvSize(-1,-1), termcrit);
-            points[1].push_back(tmp[0]);
-            addRemovePt = false;
-        }
+        // if( addRemovePt && points[1].size() < (size_t)MAX_COUNT )
+        // {
+        //     vector<Point2f> tmp;
+        //     tmp.push_back(point);
+        //     cornerSubPix( gray, tmp, winSize, cvSize(-1,-1), termcrit);
+        //     points[1].push_back(tmp[0]);
+        //     addRemovePt = false;
+        // }
 
         needToInit = false;
+        transpose(image, image);
+        flip(image, image , 1);
         imshow("LK Demo", image);
 
         char c = (char)waitKey(10);
@@ -193,16 +197,16 @@ int main( int argc, char** argv )
         std::swap(points[1], points[0]);
         cv::swap(prevGray, gray);
         time_t t2 = time(0) ;
-        if(difftime(t2,t1)>1){
+        if(difftime(t2,t1)>0.5){
         	t1 = time(0);
-            iterator_count++; 
-            if(iterator_count%5 == 0)
+            // iterator_count++; 
+            // if(iterator_count%3 == 0)
             {
                 iterator_count=0;
                 needToInit = true;
             }
-            else
-                increase_points = true;
+            // else
+                // increase_points = true;
               
         }
     }
