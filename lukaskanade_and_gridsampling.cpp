@@ -53,6 +53,7 @@ int main( int argc, char** argv )
     int step = 40; // 10 pixels spacing between kp's
 
     vector<Point2f> points[2];
+    vector <bool> foreground;
 
     bool addPoints = false;
     time_t t1 = time(0) ;
@@ -118,7 +119,14 @@ int main( int argc, char** argv )
             calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
                                  3, termcrit, 0, 0.001);
             size_t i, k;
-            
+            foreground.clear();
+            for (int i = 0; i < points[0].size(); ++i)
+            {
+                if(norm(points[0][i] - points[1][i])>1)
+                    foreground.push_back(true);
+                else
+                    foreground.push_back(false);
+            }
             for( i = k = 0; i < points[1].size(); i++ )
             {
                 if( addRemovePt )
@@ -135,12 +143,16 @@ int main( int argc, char** argv )
 
                 points[1][k++] = points[1][i];
                 
-                if(color == 0)
-	                circle( image, points[1][i], 3, Scalar(255,0,0), -1, 8);
-	            if(color == 1)
-	                circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
-	            if(color == 2)
-	                circle( image, points[1][i], 3, Scalar(0,0,255), -1, 8);
+             //    if(color == 0)
+	            //     circle( image, points[1][i], 3, Scalar(255,0,0), -1, 8);
+	            // if(color == 1)
+	            //     circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
+	            // if(color == 2)
+	            //     circle( image, points[1][i], 3, Scalar(0,0,255), -1, 8);
+                if(foreground[i])
+                    circle( image, points[1][i], 3, Scalar(0,0,255), -1, 8);
+                else
+                    circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
             }
             points[1].resize(k);
         }
