@@ -1,7 +1,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
+#include <iostream>
 using namespace cv;
-
+using namespace std;
 int main(int argc, char** argv)
 {
 
@@ -27,8 +28,8 @@ int main(int argc, char** argv)
 
 	sift.compute(img, keypoints, descriptors);
     Mat output_img;
-    // drawKeypoints(img, descriptors, output_img);
-
+    drawKeypoints(img, descriptors, output_img);
+    
     namedWindow("Image");
     imshow("Image", descriptors);
     waitKey(0);

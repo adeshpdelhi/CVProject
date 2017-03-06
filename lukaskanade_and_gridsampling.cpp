@@ -31,7 +31,7 @@ int main( int argc, char** argv )
     TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 20, 0.03);
     Size subPixWinSize(10,10), winSize(31,31);
 
-    const int MAX_COUNT = 500;
+    const int MAX_COUNT = 500, MAX_COUNT_INCREMENT = 100;
     bool needToInit = true;
     bool nightMode = false;
 
@@ -49,56 +49,18 @@ int main( int argc, char** argv )
     namedWindow( "LK Demo", 1 );
 
     Mat gray, prevGray, image;
-    
-    /////////////////////
-
-    Mat img;
-    cap >> img;
-    SiftDescriptorExtractor sift;
-
-    vector<KeyPoint> keypoints; // keypoint storage
-    Mat descriptors; // descriptor storage
-
-    // manual keypoint grid
 
     int step = 40; // 10 pixels spacing between kp's
 
     vector<Point2f> points[2];
 
-    for (int y=step; y<img.rows-step; y+=step){
-        for (int x=step; x<img.cols-step; x+=step){
-
-            // x,y,radius
-            // keypoints.push_back(KeyPoint(float(x), float(y), float(step)));
-            Point2f point = Point2f((float)x, (float)y);
-            points[1].push_back(point);
-        }
-    }
-
-    // compute descriptors
-
-    // sift.compute(img, keypoints, descriptors);
-
-    // for(int i = 0;i < descriptors.rows;i++){
-    //     for(int j= 0 ;j<descriptors.cols; j++){
-    //     	float p=i;
-    //     	float q=j;
-    //         if(descriptors.at<double>(i,j)==0){
-    //         	Point2f point = Point2f((float)i, (float)j);
-    //             points[1].push_back(point);
-    //         }
-    //     }
-    // }
-
-
-/////////////////
-
-
-    // vector<Point2f> points[2];
     bool addPoints = false;
     time_t t1 = time(0) ;
     int color = 0;
     srand (time(NULL));
+    vector<Point2f> new_points;
+    bool increase_points = false;
+    int iterator_count = 0;
     for(;;)
     {
         Mat frame;
@@ -116,27 +78,37 @@ int main( int argc, char** argv )
         if( needToInit )
         {
             // automatic initialization
-            // goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
-            // cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
-            // addRemovePt = false;
-            int offsetx =rand()%10;
-            int offsety = rand()%10;
-            for (int y=step+offsety; y<img.rows-step; y+=step){
-		        for (int x=step+offsetx; x<img.cols-step; x+=step){
-		        	offsetx =rand()%10;
-		        	offsety = rand()%10;
-		            // x,y,radius
-		            // keypoints.push_back(KeyPoint(float(x), float(y), float(step)));
-		            Point2f point = Point2f((float)x+offsetx, (float)y+offsety);
-		            points[1].push_back(point);
+            cout<<"initialization ========================================"<<endl;
+            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 3, Mat(), 3, 0, 0.04);
+            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+            addRemovePt = false;
+            cout<<"New size of feature points "<<points[1].size()<<endl;
+      //       int offsetx;
+      //       int offsety;
+      //       for (int y=step; y<frame.rows-step; y+=step){
+		    //     for (int x=step; x<frame.cols-step; x+=step){
+		    //     	offsetx =rand()%10;
+		    //     	offsety = rand()%10;
+		    //         Point2f point = Point2f((float)x+offsetx, (float)y+offsety);
+		    //         points[1].push_back(point);
 
-		        }
-		        // break;
-		    }
+		    //     }
+		    // }
 		    color++;
             color= color%3;
+            needToInit = false;
         }
-        
+        else if(increase_points){
+            cout<<"Incrementing +++++++++++++"<<endl;
+            goodFeaturesToTrack(gray, new_points, MAX_COUNT_INCREMENT, 0.01, 10, Mat(), 3, 0, 0.04);
+            addRemovePt = false;
+            int final_size = new_points.size() + points[1].size();
+            points[1].insert(points[1].end(), new_points.begin(), new_points.end());
+            // cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+            points[1].resize(final_size);
+            cout<<"Added points size "<<new_points.size()<<". Final size of feature points "<<points[1].size()<<endl;
+            increase_points = false;
+        }
         else if( !points[0].empty() )
         {
             vector<uchar> status;
@@ -192,6 +164,8 @@ int main( int argc, char** argv )
         {
         case 'r':
             needToInit = true;
+            points[0].clear();
+            points[1].clear();
             break;
         case 'c':
             points[0].clear();
@@ -205,12 +179,17 @@ int main( int argc, char** argv )
         std::swap(points[1], points[0]);
         cv::swap(prevGray, gray);
         time_t t2 = time(0) ;
-        // cout<<"t1 "<<t1<<endl;
-        // cout<<"t2 "<<t2<<endl;
         if(difftime(t2,t1)>1){
         	t1 = time(0);
-        	// cout<<"here";
-        	needToInit = true;
+            iterator_count++; 
+            if(iterator_count%5 == 0)
+            {
+                iterator_count=0;
+                needToInit = true;
+            }
+            else
+                increase_points = true;
+              
         }
     }
 
