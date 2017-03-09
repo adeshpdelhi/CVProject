@@ -51,7 +51,7 @@ int main( int argc, char** argv )
 
     Mat gray, prevGray, image;
 
-    int step = 40; // 10 pixels spacing between kp's
+    int step = 20; // 10 pixels spacing between kp's
 
     vector<Point2f> points[2];
     vector <bool> foreground;
@@ -63,7 +63,7 @@ int main( int argc, char** argv )
     vector<Point2f> new_points;
     bool increase_points = false;
     int iterator_count = 0;
-    
+    time_t r1 = time(0),r2;
     for(;;)
     {
         Mat frame;
@@ -83,13 +83,13 @@ int main( int argc, char** argv )
         if( needToInit )
         {
             // automatic initialization
-            cout<<"initialization ========================================"<<endl;
-            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 2, Mat(), 3, 0, 0.04);
+            // cout<<"initialization ========================================"<<endl;
+            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 1, Mat(), 3, 0, 0.04);
             cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
             addRemovePt = false;
-            cout<<"New size of feature points "<<points[1].size()<<endl;
       //       int offsetx;
       //       int offsety;
+      //       points[1].clear();
       //       for (int y=step; y<frame.rows-step; y+=step){
 		    //     for (int x=step; x<frame.cols-step; x+=step){
 		    //     	offsetx =rand()%10;
@@ -99,6 +99,8 @@ int main( int argc, char** argv )
 
 		    //     }
 		    // }
+            
+            // cout<<"New size of feature points "<<points[1].size()<<endl;
 		    color++;
             color= color%3;
             needToInit = false;
@@ -124,13 +126,25 @@ int main( int argc, char** argv )
                                  3, termcrit, 0, 0.001);
             size_t i, k;
             foreground.clear();
+		  	Mat_ <float> H = findHomography( points[0], points[1], CV_RANSAC );
+
             for (int i = 0; i < points[0].size(); ++i)
             {
-                if(norm(points[0][i] - points[1][i])>1.5)
+                // if(norm(points[0][i] - points[1][i])>3)
+                //     foreground.push_back(true);
+                // else
+                //     foreground.push_back(false);
+	            Vec3f old_point = Vec3f((float)points[0][i].x, (float)points[0][i].y, 1.0);
+                Mat new_point_matrix  = H*Mat(old_point);
+                Point2f new_point = Point2f(new_point_matrix.at<float>(0,0)/new_point_matrix.at<float>(2,0),new_point_matrix.at<float>(1,0)/new_point_matrix.at<float>(2,0));
+                // cout<<new_point_matrix.at<float>(2,0)<<endl;
+                // cout<<old_point<<endl<<new_point<<endl<<endl;
+                if(norm(points[1][i] - new_point)>3)
                     foreground.push_back(true);
                 else
                     foreground.push_back(false);
             }
+
             for( i = k = 0; i < points[1].size(); i++ )
             {
                 // if( addRemovePt )
@@ -171,8 +185,8 @@ int main( int argc, char** argv )
         // }
 
         needToInit = false;
-        // transpose(image, image);
-        // flip(image, image , 1);
+        transpose(image, image);
+        flip(image, image , 1);
         imshow("LK Demo", image);
 
         char c = (char)waitKey(10);
@@ -197,7 +211,9 @@ int main( int argc, char** argv )
         std::swap(points[1], points[0]);
         cv::swap(prevGray, gray);
         time_t t2 = time(0) ;
-        if(difftime(t2,t1)>0.5){
+        // int p=1;
+        // while(p++<1000);
+        if(difftime(t2,t1)>1){
         	t1 = time(0);
             // iterator_count++; 
             // if(iterator_count%3 == 0)
@@ -209,6 +225,7 @@ int main( int argc, char** argv )
                 // increase_points = true;
               
         }
+
     }
 
     return 0;
