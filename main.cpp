@@ -84,21 +84,21 @@ int main( int argc, char** argv )
         {
             // automatic initialization
             // cout<<"initialization ========================================"<<endl;
-            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 1, Mat(), 3, 0, 0.04);
-            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
-            addRemovePt = false;
-      //       int offsetx;
-      //       int offsety;
-      //       points[1].clear();
-      //       for (int y=step; y<frame.rows-step; y+=step){
-		    //     for (int x=step; x<frame.cols-step; x+=step){
-		    //     	offsetx =rand()%10;
-		    //     	offsety = rand()%10;
-		    //         Point2f point = Point2f((float)x+offsetx, (float)y+offsety);
-		    //         points[1].push_back(point);
+            // goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 1, Mat(), 3, 0, 0.04);
+            // cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+            // addRemovePt = false;
+            int offsetx;
+            int offsety;
+            points[1].clear();
+            for (int y=step; y<frame.rows-step; y+=step){
+		        for (int x=step; x<frame.cols-step; x+=step){
+		        	offsetx =rand()%10;
+		        	offsety = rand()%10;
+		            Point2f point = Point2f((float)x+offsetx, (float)y+offsety);
+		            points[1].push_back(point);
 
-		    //     }
-		    // }
+		        }
+		    }
             
             // cout<<"New size of feature points "<<points[1].size()<<endl;
 		    color++;
@@ -139,7 +139,7 @@ int main( int argc, char** argv )
                 Point2f new_point = Point2f(new_point_matrix.at<float>(0,0)/new_point_matrix.at<float>(2,0),new_point_matrix.at<float>(1,0)/new_point_matrix.at<float>(2,0));
                 // cout<<new_point_matrix.at<float>(2,0)<<endl;
                 // cout<<old_point<<endl<<new_point<<endl<<endl;
-                if(norm(points[1][i] - new_point)>3)
+                if(norm(points[1][i] - new_point)>2)
                     foreground.push_back(true);
                 else
                     foreground.push_back(false);
