@@ -33,6 +33,7 @@ struct points_compare {
     }
 };
 
+int colors[10][3];
 bool REMOVE_UNTRACKED_POINTS = true;
 int PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION = 30;
 float ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION = 20.0f;
@@ -48,19 +49,6 @@ vector< set<Point2f, points_compare> > cluster_foreground_vectors;
 bool compare_motion_vectors(const motion_vector m1, const motion_vector m2){
 	return m1.angle < m2.angle;
 }
-
-// friend Point2f operator<(const T& type, const Matrix& matrix)
-// {
-//     return matrix + type;
-// }
-
-// template <>
-// bool Point2f::operator<(const Point2f& rhs) const
-// {
-//    // return (rhs.x == this->x && rhs.y == this->y);
-// 	return false;
-// }
-
 
 
 void merge_points(Point2f p1, Point2f p2){
@@ -222,17 +210,18 @@ int main( int argc, char** argv )
             		}
             	}
             }
-            
-    		srand(time(NULL));	  int r1,r2,r3;  
-    		bool flag_atleast_one_cluster = false;    
+    		int r1,r2,r3;
+    		bool flag_atleast_one_cluster = false;  
+    		int cluster_counter = 0;  
             for(int i = 0; i<cluster_foreground_vectors.size();i++){
-        		r1 = rand()%255; r2 = rand()%255; r3 = rand()%255;
         		if(cluster_foreground_vectors[i].size()>MINIMUM_NUMBER_OF_POINTS_IN_CLUSTER){
         			flag_atleast_one_cluster = true;
+        			r1 = colors[cluster_counter][0];r2 = colors[cluster_counter][1]; r3 = colors[cluster_counter][2];
         			cout<<"Cluster size"<<cluster_foreground_vectors[i].size()<<endl;
 	            	for(set<Point2f, points_compare> :: iterator j = cluster_foreground_vectors[i].begin(); j!= cluster_foreground_vectors[i].end();j++){
 	            		circle( image, *j, 3, Scalar(r1,r2,r3), -1, 8);
         			}
+        			cluster_counter++;
             	}
             }
             if(flag_atleast_one_cluster)
@@ -273,8 +262,13 @@ int main( int argc, char** argv )
         cv::swap(prevGray, gray);
         t2 = time(0) ;
         if(difftime(t2,t1)>1){
+    		srand(time(NULL));	  int r1,r2,r3;  
         	t1 = time(0);
-	        needToInit = true;     
+	        needToInit = true;
+	        for(int i=0;i<10;i++){
+	    		r1 = rand()%255; r2 = rand()%255; r3 = rand()%255;
+	    		colors[i][0] = r1; colors[i][1] = r2; colors[i][2] = r3;
+	    	}
 	        foreground_motion_vectors.clear();     
         }
     }
