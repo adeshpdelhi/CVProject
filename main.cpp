@@ -104,7 +104,6 @@ int main( int argc, char** argv )
                 else
                     foreground.push_back(false);
             }
-
             for(int  i = 0; i < points[1].size(); i++ )
             {
                 if(foreground[i])
