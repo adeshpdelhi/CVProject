@@ -130,6 +130,10 @@ int main( int argc, char** argv )
 
             for (int i = 0; i < points[0].size(); ++i)
             {
+            	if(status[i] == 0){
+            		foreground.push_back(false);
+            		continue;
+            	}
                 // if(norm(points[0][i] - points[1][i])>3)
                 //     foreground.push_back(true);
                 // else
@@ -185,8 +189,10 @@ int main( int argc, char** argv )
         // }
 
         needToInit = false;
-        transpose(image, image);
-        flip(image, image , 1);
+        if(argc>=2){
+	        transpose(image, image);
+	        flip(image, image , 1);
+    	}
         imshow("LK Demo", image);
 
         char c = (char)waitKey(10);
