@@ -44,6 +44,7 @@ vector<Point2f> points[2];
 vector <bool> foreground;
 vector<Point2f> new_points;
 vector<motion_vector> foreground_motion_vectors;
+vector<Point2f> foreground_motion_vectors_points;
 vector< set<Point2f, points_compare> > cluster_foreground_vectors;
 
 bool compare_motion_vectors(const motion_vector m1, const motion_vector m2){
@@ -197,12 +198,14 @@ int main( int argc, char** argv )
                 	//foreground point
                 	float cos_angle = (points[1][i].x - points[0][i].x)/(float)norm(points[1][i] - points[0][i]);
                 	motion_vector mVector(points[1][i], cos_angle);
+                	foreground_motion_vectors_points.push_back(points[1][i]);//////////////////////////////////
                 	foreground_motion_vectors.push_back(mVector);
+                	cout<<"added";
                 }
             }
             // sort(foreground_motion_vectors.begin(), foreground_motion_vectors.end(), compare_motion_vectors);
             cluster_foreground_vectors.clear();
-            for (int i = 0; i < foreground_motion_vectors.size() ; ++i)
+           /* for (int i = 0; i < foreground_motion_vectors.size() ; ++i)
             {
             	for(int j = i+1; j<foreground_motion_vectors.size();j++){
             		if(norm(foreground_motion_vectors[i].point - foreground_motion_vectors[j].point) < PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION && abs(foreground_motion_vectors[i].angle - foreground_motion_vectors[j].angle)<ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION){
@@ -210,6 +213,33 @@ int main( int argc, char** argv )
             		}
             	}
             }
+            cout<<"size";
+			cout<<foreground_motion_vectors_points.size();*/
+			//kmeans/////////////////////////////
+			cout<<"size...///...";
+			cout<<foreground_motion_vectors.size();
+			if(foreground_motion_vectors_points.size()>50)
+				{
+					Mat sample = Mat(foreground_motion_vectors_points); 
+					int clusterCount = 2;
+					  Mat labels;
+					  int attempts = 5;
+					  Mat centers;
+					  kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
+					  	10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
+
+					for(int i = 0; i<foreground_motion_vectors_points.size();i++)
+					{
+							int l=labels.at<int>(i,0);
+	            			circle( image, foreground_motion_vectors_points[i], 3, Scalar(colors[l][0],colors[l][1],colors[l][2]), -1, 8);
+	            	
+        			}
+
+
+				}
+				foreground_motion_vectors_points.clear();
+			////////////////////////////////////
+
     		int r1,r2,r3;
     		bool flag_atleast_one_cluster = false;  
     		int cluster_counter = 0;  
@@ -219,19 +249,19 @@ int main( int argc, char** argv )
         			r1 = colors[cluster_counter][0];r2 = colors[cluster_counter][1]; r3 = colors[cluster_counter][2];
         			cout<<"Cluster size"<<cluster_foreground_vectors[i].size()<<endl;
 	            	for(set<Point2f, points_compare> :: iterator j = cluster_foreground_vectors[i].begin(); j!= cluster_foreground_vectors[i].end();j++){
-	            		circle( image, *j, 3, Scalar(r1,r2,r3), -1, 8);
+	            		//circle( image, *j, 3, Scalar(r1,r2,r3), -1, 8);
         			}
         			cluster_counter++;
             	}
             }
             if(flag_atleast_one_cluster)
             	cout<<"-----------\n";
-            // for(int  i = 0; i < points[1].size(); i++ )
-            // {
-            //     if(foreground[i])
-            //         circle( image, points[1][i], 3, Scalar(0,0,255), -1, 8);
-            //     else
-            //         circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
+             //for(int  i = 0; i < points[1].size(); i++ )
+             //{
+             //  if(foreground[i])
+             //        circle( image, points[1][i], 3, Scalar(0,0,255), -1, 8);
+             //    else
+             //        circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
             // }
         }
 
