@@ -34,6 +34,7 @@ struct points_compare {
 };
 
 int colors[10][3];
+int best_k;
 bool REMOVE_UNTRACKED_POINTS = true;
 int PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION = 30;
 float ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION = 20.0f;
@@ -102,6 +103,7 @@ int main( int argc, char** argv )
     Size subPixWinSize(10,10), winSize(31,31);
     const int MAX_COUNT = 500, MAX_COUNT_INCREMENT = 100;
     bool needToInit = true;
+    bool needToFindK = true;
     bool nightMode = false;
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         cap.open(argc == 2 ? argv[1][0] - '0' : 0);
@@ -200,7 +202,7 @@ int main( int argc, char** argv )
                 	motion_vector mVector(points[1][i], cos_angle);
                 	foreground_motion_vectors_points.push_back(points[1][i]);//////////////////////////////////
                 	foreground_motion_vectors.push_back(mVector);
-                	cout<<"added";
+                	//cout<<"added";
                 }
             }
             // sort(foreground_motion_vectors.begin(), foreground_motion_vectors.end(), compare_motion_vectors);
@@ -216,31 +218,71 @@ int main( int argc, char** argv )
             cout<<"size";
 			cout<<foreground_motion_vectors_points.size();*/
 			//kmeans/////////////////////////////
-			cout<<"size...///...";
-			cout<<foreground_motion_vectors.size();
-			if(foreground_motion_vectors_points.size()>50)
-				{
-					Mat sample = Mat(foreground_motion_vectors_points); 
-					int clusterCount = 2;
-					  Mat labels;
-					  int attempts = 5;
-					  Mat centers;
-					  kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
-					  	10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
 
-					for(int i = 0; i<foreground_motion_vectors_points.size();i++)
+			Mat sample = Mat(foreground_motion_vectors_points); 
+			Mat labels;
+			int attempts = 5;
+			Mat centers;
+			int clusterCount;
+
+	if(foreground_motion_vectors_points.size()>50){
+			
+			
+            if(needToFindK){
+            	cout<<"NEED TO FIND K";
+            	float arr[10];
+            	
+            	
+            	for(int i=1;i<=3;i++){
+
+            		clusterCount = i;
+					float comp=kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
+					  		10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
+					arr[i]=comp;
+					
+     	      	}
+            	float max_diff=0;
+            	float diff=0;;
+            	for(int i=1;i<3;i++){
+            		diff=arr[i+1]-arr[i];
+            		if(i==1){
+            			max_diff=diff;
+            			best_k=2;
+            		}
+            		else if(diff>max_diff){
+            			max_diff=diff;
+            			best_k=i+1;
+            		}
+            	}
+
+            	cout<<"found best k = "<<best_k;
+            	
+            	needToFindK = false;
+            }	
+
+
+			//cout<<"size...///...";
+			//cout<<foreground_motion_vectors.size();
+			clusterCount = best_k;
+			
+			 float compactness=kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
+			 		10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
+			 //cout<<"compactness";
+			 //cout<<compactness;
+
+			for(int i = 0; i<foreground_motion_vectors_points.size();i++)
 					{
-							int l=labels.at<int>(i,0);
-	            			circle( image, foreground_motion_vectors_points[i], 3, Scalar(colors[l][0],colors[l][1],colors[l][2]), -1, 8);
+						int l=labels.at<int>(i,0);
+	        			circle( image, foreground_motion_vectors_points[i], 3, Scalar(colors[l][0],colors[l][1],colors[l][2]), -1, 8);
 	            	
-        			}
+        	}	
+					
 
-
-				}
+		}
 				foreground_motion_vectors_points.clear();
 			////////////////////////////////////
 
-    		int r1,r2,r3;
+    	/*	int r1,r2,r3;
     		bool flag_atleast_one_cluster = false;  
     		int cluster_counter = 0;  
             for(int i = 0; i<cluster_foreground_vectors.size();i++){
@@ -255,7 +297,7 @@ int main( int argc, char** argv )
             	}
             }
             if(flag_atleast_one_cluster)
-            	cout<<"-----------\n";
+            	cout<<"-----------\n";*/
              //for(int  i = 0; i < points[1].size(); i++ )
              //{
              //  if(foreground[i])
@@ -295,6 +337,7 @@ int main( int argc, char** argv )
     		srand(time(NULL));	  int r1,r2,r3;  
         	t1 = time(0);
 	        needToInit = true;
+	       	needToFindK=true;
 	        for(int i=0;i<10;i++){
 	    		r1 = rand()%255; r2 = rand()%255; r3 = rand()%255;
 	    		colors[i][0] = r1; colors[i][1] = r2; colors[i][2] = r3;
