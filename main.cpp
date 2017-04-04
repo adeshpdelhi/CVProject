@@ -40,8 +40,8 @@ int colors[10][3];
 int best_k;
 vector<Point2f> bottom_point;
 bool REMOVE_UNTRACKED_POINTS = true;
-int ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS = 100;
-int THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS = 60; // in %
+int ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS = 50;
+int THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS = 80; // in %
 int PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION = 30;
 float ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION = 20.0f;
 float THRESHOLD_FOR_BACKGROUND_FOREGROUND_DISTINCTION = 3.0f;
@@ -246,7 +246,7 @@ int main( int argc, char** argv )
 			
 			
             if(needToFindK){
-            	cout<<"NEED TO FIND K";
+            	//cout<<"NEED TO FIND K";
             	float arr[10];
             	
             	
@@ -272,7 +272,7 @@ int main( int argc, char** argv )
             		}
             	}
 
-            	cout<<"found best k = "<<best_k;
+            	cout<<"found best k = "<<best_k<<endl;
             	
             	needToFindK = false;
             }	
@@ -324,7 +324,6 @@ int main( int argc, char** argv )
 				 cluster_dist_from_bottom_point.push_back(avg_dist_from_bottom_point);
 				 
 			 }
-			 cout<<"sizeeeeeee"<<cluster_dist_from_bottom_point.size();
 			 
 			 float min_dist=cluster_dist_from_bottom_point.at(0);
 			 int min_cluster_no=0;
@@ -335,7 +334,7 @@ int main( int argc, char** argv )
 				 }
 			 }
 
-			 cout<<"min cluister no : "<<min_cluster_no<<endl;
+			 //cout<<"min cluster no : "<<min_cluster_no<<endl;
 			 
 			 // min_cluster_no contains the cluster which is urgenta and approaching...
 			 /////////////////// APPROACHING / URGENT END ////////////////////////////////////////////////////////////////////////////////////////
