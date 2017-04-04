@@ -36,6 +36,8 @@ struct points_compare {
 int colors[10][3];
 int best_k;
 bool REMOVE_UNTRACKED_POINTS = true;
+int ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS = 100;
+int THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS = 60; // in %
 int PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION = 30;
 float ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION = 20.0f;
 float THRESHOLD_FOR_BACKGROUND_FOREGROUND_DISTINCTION = 3.0f;
@@ -46,6 +48,8 @@ vector <bool> foreground;
 vector<Point2f> new_points;
 vector<motion_vector> foreground_motion_vectors;
 vector<Point2f> foreground_motion_vectors_points;
+vector<float> foreground_motion_vectors_angles;
+vector<float> cluster_dist_from_bottom_point;
 vector< set<Point2f, points_compare> > cluster_foreground_vectors;
 
 bool compare_motion_vectors(const motion_vector m1, const motion_vector m2){
@@ -201,6 +205,8 @@ int main( int argc, char** argv )
                 	float cos_angle = (points[1][i].x - points[0][i].x)/(float)norm(points[1][i] - points[0][i]);
                 	motion_vector mVector(points[1][i], cos_angle);
                 	foreground_motion_vectors_points.push_back(points[1][i]);//////////////////////////////////
+					foreground_motion_vectors_angles.push_back(points[1][i].angle);//////////////////////////////////
+
                 	foreground_motion_vectors.push_back(mVector);
                 	//cout<<"added";
                 }
@@ -261,14 +267,60 @@ int main( int argc, char** argv )
             }	
 
 
-			//cout<<"size...///...";
-			//cout<<foreground_motion_vectors.size();
 			clusterCount = best_k;
 			
 			 float compactness=kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
 			 		10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
-			 //cout<<"compactness";
-			 //cout<<compactness;
+			 
+			 ///////////   APPROACHING / URGENT  /////////////////////////////////////////////////////////////////////////////////////////////
+			 
+			 int bottom_point[][]=image[image.rows][image.cols/2];
+			 
+			 for(int i=0;i<clusterCount;i++){           							 //loop over all clusters
+				 vector<int> cluster_points_indices;
+				 
+				 for(int p=0;p<foreground_motion_vectors_points.size();p++){		//loop over all points (to identify points in cluster i)
+					 if(labels.at<int>(p,0) == i){
+						 cluster_points_indices.push_back(p);								// adding the index of the point belongong to cluster i
+					}
+				 }
+				
+				 int approaching=0; int departing=0;								// for storing the voting of approaching/departing based on angle
+				 for(int v=0;i<cluster_point.size();v++){						   // loop over all cluster points for voting
+					 if( foreground_motion_vectors_angles.at<float>(v,0) <= ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS)
+						 approaching=approaching+1;
+					 else
+						 departing=departing+1;
+				 }
+				 
+				 approaching=(approaching*100)/(cluster_points_indices.size);				//converting into %
+				 departing=(departing*100)/(cluster_points_indices.size);						//converting into %
+				 
+				 int dist_from_bottom_point=0;
+				 
+				 if(approaching >= THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS)
+				 {
+					 for(int j=0;j<cluster_points_indices.size();j++){
+						 dist_from_bottom_point = dist_from_bottom_point + norm(foreground_motion_vectors_points.at<Point2f>(j,0) - bottom_point)
+					 }
+					 int avg_dist_from_bottom_point = dist_from_bottom_point/cluster_points_indices.size;
+				 }
+				 
+				 cluster_dist_from_bottom_point.pushback(avg_dist_from_bottom_point);
+				 
+			 }
+			 
+			 float min_dist=cluster_dist_from_bottom_point.at<float>(0,0);
+			 int min_cluster_no=0;
+			 for(int i=0;i<cluster_dist_from_bottom_point.size();i++){
+				 if(cluster_dist_from_bottom_point.at<float>(i,0) < min_dist){
+					 min_dist=cluster_dist_from_bottom_point.at<float>(i,0);
+					min_cluster_no = i;
+				 }
+			 }
+			 
+			 // min_cluster_no contains the cluster which is urgenta and approaching...
+			 /////////////////// APPROACHING / URGENT END ////////////////////////////////////////////////////////////////////////////////////////
 
 			for(int i = 0; i<foreground_motion_vectors_points.size();i++)
 					{
