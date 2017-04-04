@@ -21,6 +21,9 @@ public:
 	motion_vector(Point2f point, float angle){
 		this->point = point; this->angle = acos(angle)*180/PI;
 	};
+	float getAngle(motion_vector m){
+		return m.angle;
+	}
 };
 
 struct points_compare {
@@ -35,6 +38,7 @@ struct points_compare {
 
 int colors[10][3];
 int best_k;
+vector<Point2f> bottom_point;
 bool REMOVE_UNTRACKED_POINTS = true;
 int ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS = 100;
 int THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS = 60; // in %
@@ -50,6 +54,7 @@ vector<motion_vector> foreground_motion_vectors;
 vector<Point2f> foreground_motion_vectors_points;
 vector<float> foreground_motion_vectors_angles;
 vector<float> cluster_dist_from_bottom_point;
+vector<int> cluster_points_indices;
 vector< set<Point2f, points_compare> > cluster_foreground_vectors;
 
 bool compare_motion_vectors(const motion_vector m1, const motion_vector m2){
@@ -205,14 +210,14 @@ int main( int argc, char** argv )
                 	float cos_angle = (points[1][i].x - points[0][i].x)/(float)norm(points[1][i] - points[0][i]);
                 	motion_vector mVector(points[1][i], cos_angle);
                 	foreground_motion_vectors_points.push_back(points[1][i]);//////////////////////////////////
-					foreground_motion_vectors_angles.push_back(points[1][i].angle);//////////////////////////////////
+					foreground_motion_vectors_angles.push_back(cos_angle);//////////////////////////////////
 
                 	foreground_motion_vectors.push_back(mVector);
                 	//cout<<"added";
                 }
             }
             // sort(foreground_motion_vectors.begin(), foreground_motion_vectors.end(), compare_motion_vectors);
-            cluster_foreground_vectors.clear();
+           // cluster_foreground_vectors.clear();
            /* for (int i = 0; i < foreground_motion_vectors.size() ; ++i)
             {
             	for(int j = i+1; j<foreground_motion_vectors.size();j++){
@@ -225,7 +230,13 @@ int main( int argc, char** argv )
 			cout<<foreground_motion_vectors_points.size();*/
 			//kmeans/////////////////////////////
 
-			Mat sample = Mat(foreground_motion_vectors_points); 
+			cout<"HIIII";
+			Mat pts=Mat(foreground_motion_vectors_points);
+			Mat angles=Mat(foreground_motion_vectors_angles);
+			Mat matarray[]={pts,angles};
+
+			Mat sample=Mat(foreground_motion_vectors_points);
+			//hconcat(pts,angles,sample);
 			Mat labels;
 			int attempts = 5;
 			Mat centers;
@@ -271,13 +282,16 @@ int main( int argc, char** argv )
 			
 			 float compactness=kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
 			 		10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
-			 
+			 // cout<<labels<<endl;
+
+			 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			 ///////////   APPROACHING / URGENT  /////////////////////////////////////////////////////////////////////////////////////////////
 			 
-			 int bottom_point[][]=image[image.rows][image.cols/2];
 			 
-			 for(int i=0;i<clusterCount;i++){           							 //loop over all clusters
-				 vector<int> cluster_points_indices;
+			  bottom_point.push_back(Point2f(image.rows,image.cols/2));
+			 for(int i=0;i<clusterCount;i++)
+			 {           							 //loop over all clusters
+				
 				 
 				 for(int p=0;p<foreground_motion_vectors_points.size();p++){		//loop over all points (to identify points in cluster i)
 					 if(labels.at<int>(p,0) == i){
@@ -286,52 +300,71 @@ int main( int argc, char** argv )
 				 }
 				
 				 int approaching=0; int departing=0;								// for storing the voting of approaching/departing based on angle
-				 for(int v=0;i<cluster_point.size();v++){						   // loop over all cluster points for voting
-					 if( foreground_motion_vectors_angles.at<float>(v,0) <= ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS)
+				 for(int v=0;v<cluster_points_indices.size();v++){						   // loop over all cluster points for voting
+					 if( foreground_motion_vectors_angles.at(cluster_points_indices.at(v)) <= ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS)
 						 approaching=approaching+1;
 					 else
 						 departing=departing+1;
 				 }
 				 
-				 approaching=(approaching*100)/(cluster_points_indices.size);				//converting into %
-				 departing=(departing*100)/(cluster_points_indices.size);						//converting into %
+				 approaching=(approaching*100)/(cluster_points_indices.size());				//converting into %
+				 departing=(departing*100)/(cluster_points_indices.size());						//converting into %
 				 
 				 int dist_from_bottom_point=0;
+				 int avg_dist_from_bottom_point=0;
 				 
 				 if(approaching >= THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS)
 				 {
 					 for(int j=0;j<cluster_points_indices.size();j++){
-						 dist_from_bottom_point = dist_from_bottom_point + norm(foreground_motion_vectors_points.at<Point2f>(j,0) - bottom_point)
+						 dist_from_bottom_point = dist_from_bottom_point + norm(foreground_motion_vectors_points.at(cluster_points_indices.at(j)) - bottom_point.at(0));
 					 }
-					 int avg_dist_from_bottom_point = dist_from_bottom_point/cluster_points_indices.size;
+					 avg_dist_from_bottom_point = dist_from_bottom_point/cluster_points_indices.size();
 				 }
 				 
-				 cluster_dist_from_bottom_point.pushback(avg_dist_from_bottom_point);
+				 cluster_dist_from_bottom_point.push_back(avg_dist_from_bottom_point);
 				 
 			 }
+			 cout<<"sizeeeeeee"<<cluster_dist_from_bottom_point.size();
 			 
-			 float min_dist=cluster_dist_from_bottom_point.at<float>(0,0);
+			 float min_dist=cluster_dist_from_bottom_point.at(0);
 			 int min_cluster_no=0;
 			 for(int i=0;i<cluster_dist_from_bottom_point.size();i++){
-				 if(cluster_dist_from_bottom_point.at<float>(i,0) < min_dist){
-					 min_dist=cluster_dist_from_bottom_point.at<float>(i,0);
+				 if(cluster_dist_from_bottom_point.at(i) < min_dist){
+					 min_dist=cluster_dist_from_bottom_point.at(i);
 					min_cluster_no = i;
 				 }
 			 }
+
+			 cout<<"min cluister no : "<<min_cluster_no<<endl;
 			 
 			 // min_cluster_no contains the cluster which is urgenta and approaching...
 			 /////////////////// APPROACHING / URGENT END ////////////////////////////////////////////////////////////////////////////////////////
 
-			for(int i = 0; i<foreground_motion_vectors_points.size();i++)
+
+			 /////// showinh only urgent//////////////
+
+			for(int i = 0; i<foreground_motion_vectors_points.size();i++){
+						int l=labels.at<int>(i,0);
+						if(l==min_cluster_no){
+	        				circle( image, foreground_motion_vectors_points[i], 3, Scalar(colors[l][0],colors[l][1],colors[l][2]), -1, 8);
+	            		}
+        	}	
+
+
+			/*for(int i = 0; i<foreground_motion_vectors_points.size();i++)
 					{
 						int l=labels.at<int>(i,0);
 	        			circle( image, foreground_motion_vectors_points[i], 3, Scalar(colors[l][0],colors[l][1],colors[l][2]), -1, 8);
 	            	
-        	}	
+        	}*/	
 					
 
 		}
 				foreground_motion_vectors_points.clear();
+				foreground_motion_vectors_angles.clear();
+				cluster_dist_from_bottom_point.clear();
+				cluster_points_indices.clear();
+
 			////////////////////////////////////
 
     	/*	int r1,r2,r3;
