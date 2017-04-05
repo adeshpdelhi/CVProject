@@ -21,9 +21,7 @@ public:
 	motion_vector(Point2f point, float angle){
 		this->point = point; this->angle = acos(angle)*180/PI;
 	};
-	float getAngle(motion_vector m){
-		return m.angle;
-	}
+	
 };
 
 struct points_compare {
@@ -62,48 +60,7 @@ bool compare_motion_vectors(const motion_vector m1, const motion_vector m2){
 }
 
 
-void merge_points(Point2f p1, Point2f p2){
-	int s1 = -1;
-	for(int i = 0; i<cluster_foreground_vectors.size();i++)
-		if(cluster_foreground_vectors[i].find(p1) != cluster_foreground_vectors[i].end()){
-			s1 = i; break;
-		}
-	int s2 = -1;
-	for(int i = 0; i<cluster_foreground_vectors.size();i++)
-		if(cluster_foreground_vectors[i].find(p2) != cluster_foreground_vectors[i].end()){
-			s2 = i; break;
-		}
-	if(s1 == s2){
-		if(s1== -1) {
-			// create new cluster and add both
-			set<Point2f, points_compare> s;
-			s.insert(p1);s.insert(p2);
-			cluster_foreground_vectors.push_back(s);
-			return;
-		}
-		else //already in same cluster
-			return;
-	}
-	if(s1 != -1 && s2 == -1){
-		cluster_foreground_vectors[s1].insert(p2);
-	}
-	else if(s1 == -1 && s2 != -1){
-		cluster_foreground_vectors[s2].insert(p1);
-	}
-	else{
-		set <Point2f, points_compare> set1 (cluster_foreground_vectors[s1]);
-		set <Point2f, points_compare> set2 (cluster_foreground_vectors[s2]);
-		cluster_foreground_vectors.erase(cluster_foreground_vectors.begin() + s1);
-		cluster_foreground_vectors.erase(cluster_foreground_vectors.begin() + s2);
-		set <Point2f, points_compare> set_final;
-		for(set<Point2f, points_compare>::iterator i = set1.begin(); i!= set1.end();i++)
-			set_final.insert(*i);
-		for(set<Point2f, points_compare>::iterator i = set2.begin(); i!= set2.end();i++)
-			set_final.insert(*i);
-		cluster_foreground_vectors.push_back(set_final);
-	}
 
-}
 
 int main( int argc, char** argv )
 {
@@ -213,24 +170,11 @@ int main( int argc, char** argv )
 					foreground_motion_vectors_angles.push_back(cos_angle);//////////////////////////////////
 
                 	foreground_motion_vectors.push_back(mVector);
-                	//cout<<"added";
                 }
             }
-            // sort(foreground_motion_vectors.begin(), foreground_motion_vectors.end(), compare_motion_vectors);
-           // cluster_foreground_vectors.clear();
-           /* for (int i = 0; i < foreground_motion_vectors.size() ; ++i)
-            {
-            	for(int j = i+1; j<foreground_motion_vectors.size();j++){
-            		if(norm(foreground_motion_vectors[i].point - foreground_motion_vectors[j].point) < PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION && abs(foreground_motion_vectors[i].angle - foreground_motion_vectors[j].angle)<ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION){
-            			merge_points(foreground_motion_vectors[i].point, foreground_motion_vectors[j].point);
-            		}
-            	}
-            }
-            cout<<"size";
-			cout<<foreground_motion_vectors_points.size();*/
-			//kmeans/////////////////////////////
+         
+       
 
-			cout<"HIIII";
 			Mat pts=Mat(foreground_motion_vectors_points);
 			Mat angles=Mat(foreground_motion_vectors_angles);
 			Mat matarray[]={pts,angles};
@@ -250,7 +194,7 @@ int main( int argc, char** argv )
             	float arr[10];
             	
             	
-            	for(int i=1;i<=3;i++){
+            	for(int i=1;i<=4;i++){
 
             		clusterCount = i;
 					float comp=kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
@@ -282,7 +226,6 @@ int main( int argc, char** argv )
 			
 			 float compactness=kmeans(sample, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 
 			 		10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers );
-			 // cout<<labels<<endl;
 
 			 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			 ///////////   APPROACHING / URGENT  /////////////////////////////////////////////////////////////////////////////////////////////
@@ -293,38 +236,41 @@ int main( int argc, char** argv )
 			 {           							 //loop over all clusters
 				
 				 
-				 for(int p=0;p<foreground_motion_vectors_points.size();p++){		//loop over all points (to identify points in cluster i)
+				 for(int p=0;p<foreground_motion_vectors_points.size();p++){//loop over all points (to identify points in cluster i)
 					 if(labels.at<int>(p,0) == i){
-						 cluster_points_indices.push_back(p);								// adding the index of the point belongong to cluster i
+						 cluster_points_indices.push_back(p);				// adding the index of the point belongong to cluster i
 					}
 				 }
 				
-				 int approaching=0; int departing=0;								// for storing the voting of approaching/departing based on angle
-				 for(int v=0;v<cluster_points_indices.size();v++){						   // loop over all cluster points for voting
+				 int approaching=0; int departing=0;					// for storing the voting of approaching/departing based on angle
+				 for(int v=0;v<cluster_points_indices.size();v++){		// loop over all cluster points for voting
 					 if( foreground_motion_vectors_angles.at(cluster_points_indices.at(v)) <= ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS)
 						 approaching=approaching+1;
 					 else
 						 departing=departing+1;
 				 }
 				 
-				 approaching=(approaching*100)/(cluster_points_indices.size());				//converting into %
-				 departing=(departing*100)/(cluster_points_indices.size());						//converting into %
+				 approaching=(approaching*100)/(cluster_points_indices.size());		//converting into %
+				 departing=(departing*100)/(cluster_points_indices.size());			//converting into %
 				 
 				 int dist_from_bottom_point=0;
 				 int avg_dist_from_bottom_point=0;
 				 
-				 if(approaching >= THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS)
+				 if(approaching >= THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS)     // if cluster is approaching
 				 {
+				 	// finding distance from bottom point
 					 for(int j=0;j<cluster_points_indices.size();j++){
 						 dist_from_bottom_point = dist_from_bottom_point + norm(foreground_motion_vectors_points.at(cluster_points_indices.at(j)) - bottom_point.at(0));
 					 }
+					 // taking average disatnce
 					 avg_dist_from_bottom_point = dist_from_bottom_point/cluster_points_indices.size();
 				 }
-				 
+				 //pushing average distance for cluster i.
 				 cluster_dist_from_bottom_point.push_back(avg_dist_from_bottom_point);
 				 
 			 }
 			 
+			 // finding cluster npo wih minimum distance from bottom point
 			 float min_dist=cluster_dist_from_bottom_point.at(0);
 			 int min_cluster_no=0;
 			 for(int i=0;i<cluster_dist_from_bottom_point.size();i++){
@@ -334,18 +280,17 @@ int main( int argc, char** argv )
 				 }
 			 }
 
-			 //cout<<"min cluster no : "<<min_cluster_no<<endl;
 			 
 			 // min_cluster_no contains the cluster which is urgenta and approaching...
 			 /////////////////// APPROACHING / URGENT END ////////////////////////////////////////////////////////////////////////////////////////
 
 
-			 /////// showinh only urgent//////////////
+			 /////// showing only urgent//////////////
 
 			for(int i = 0; i<foreground_motion_vectors_points.size();i++){
 						int l=labels.at<int>(i,0);
 						if(l==min_cluster_no){
-	        				circle( image, foreground_motion_vectors_points[i], 3, Scalar(colors[l][0],colors[l][1],colors[l][2]), -1, 8);
+	        				circle( image, foreground_motion_vectors_points[i], 3, Scalar(0,0,255), -1, 8);
 	            		}
         	}	
 
@@ -364,31 +309,7 @@ int main( int argc, char** argv )
 				cluster_dist_from_bottom_point.clear();
 				cluster_points_indices.clear();
 
-			////////////////////////////////////
-
-    	/*	int r1,r2,r3;
-    		bool flag_atleast_one_cluster = false;  
-    		int cluster_counter = 0;  
-            for(int i = 0; i<cluster_foreground_vectors.size();i++){
-        		if(cluster_foreground_vectors[i].size()>MINIMUM_NUMBER_OF_POINTS_IN_CLUSTER){
-        			flag_atleast_one_cluster = true;
-        			r1 = colors[cluster_counter][0];r2 = colors[cluster_counter][1]; r3 = colors[cluster_counter][2];
-        			cout<<"Cluster size"<<cluster_foreground_vectors[i].size()<<endl;
-	            	for(set<Point2f, points_compare> :: iterator j = cluster_foreground_vectors[i].begin(); j!= cluster_foreground_vectors[i].end();j++){
-	            		//circle( image, *j, 3, Scalar(r1,r2,r3), -1, 8);
-        			}
-        			cluster_counter++;
-            	}
-            }
-            if(flag_atleast_one_cluster)
-            	cout<<"-----------\n";*/
-             //for(int  i = 0; i < points[1].size(); i++ )
-             //{
-             //  if(foreground[i])
-             //        circle( image, points[1][i], 3, Scalar(0,0,255), -1, 8);
-             //    else
-             //        circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
-            // }
+		
         }
 
         if(argc>=2){
