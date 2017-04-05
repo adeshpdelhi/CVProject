@@ -1,8 +1,10 @@
 //Obtained from lkdemo.cpp in opencv samples
 #include <iostream>
+#include <cstdio>
 #include <ctype.h>
 #include <time.h>
 #include <set>
+#include <climits>
 #include <algorithm>
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -24,6 +26,11 @@ public:
 	
 };
 
+float getAngle(Point2f p1, Point2f p2){
+				 		float cos_angle = (p2.x - p1.x)/(float)norm(p2 - p1);
+						float angle = acos(cos_angle)*180/PI;
+				 	}
+
 struct points_compare {
     bool operator() (const Point2f& lhs, const Point2f& rhs) const{
         if(lhs.x < rhs.x) return true;
@@ -38,8 +45,8 @@ int colors[10][3];
 int best_k;
 vector<Point2f> bottom_point;
 bool REMOVE_UNTRACKED_POINTS = true;
-int ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS = 50;
-int THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS = 80; // in %
+// int ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS = 50;
+int THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS = 60; // in %
 int PIXEL_WINDOW_FOR_MOTION_CLASS_ESTIMATION = 30;
 float ANGULAR_THRESHOLD_FOR_MOTION_CLASS_ESTIMATION = 20.0f;
 float THRESHOLD_FOR_BACKGROUND_FOREGROUND_DISTINCTION = 3.0f;
@@ -50,6 +57,7 @@ vector <bool> foreground;
 vector<Point2f> new_points;
 vector<motion_vector> foreground_motion_vectors;
 vector<Point2f> foreground_motion_vectors_points;
+vector<Point2f> foreground_motion_vectors_points_old;
 vector<float> foreground_motion_vectors_angles;
 vector<float> cluster_dist_from_bottom_point;
 vector<int> cluster_points_indices;
@@ -167,7 +175,9 @@ int main( int argc, char** argv )
                 	float cos_angle = (points[1][i].x - points[0][i].x)/(float)norm(points[1][i] - points[0][i]);
                 	motion_vector mVector(points[1][i], cos_angle);
                 	foreground_motion_vectors_points.push_back(points[1][i]);//////////////////////////////////
-					foreground_motion_vectors_angles.push_back(cos_angle);//////////////////////////////////
+                	foreground_motion_vectors_points_old.push_back(points[0][i]);//////////////////////////////////
+                	float angle = acos(cos_angle)*180/PI;
+					foreground_motion_vectors_angles.push_back(angle);
 
                 	foreground_motion_vectors.push_back(mVector);
                 }
@@ -235,7 +245,7 @@ int main( int argc, char** argv )
 			 for(int i=0;i<clusterCount;i++)
 			 {           							 //loop over all clusters
 				
-				 
+				 cluster_points_indices.clear();
 				 for(int p=0;p<foreground_motion_vectors_points.size();p++){//loop over all points (to identify points in cluster i)
 					 if(labels.at<int>(p,0) == i){
 						 cluster_points_indices.push_back(p);				// adding the index of the point belongong to cluster i
@@ -243,8 +253,10 @@ int main( int argc, char** argv )
 				 }
 				
 				 int approaching=0; int departing=0;					// for storing the voting of approaching/departing based on angle
-				 for(int v=0;v<cluster_points_indices.size();v++){		// loop over all cluster points for voting
-					 if( foreground_motion_vectors_angles.at(cluster_points_indices.at(v)) <= ANGLE_THRESHOLD_FOR_APPROACHING_OBJECTS)
+				 for(int v=0;v<cluster_points_indices.size();v++){	
+				 	// loop over all cluster points for voting
+				 	int point_index = cluster_points_indices.at(v);
+					 if(foreground_motion_vectors_points_old[point_index].y <= foreground_motion_vectors_points[point_index].y  && foreground_motion_vectors_angles.at(point_index) >=70 && foreground_motion_vectors_angles.at(point_index) <=110)
 						 approaching=approaching+1;
 					 else
 						 departing=departing+1;
@@ -253,8 +265,9 @@ int main( int argc, char** argv )
 				 approaching=(approaching*100)/(cluster_points_indices.size());		//converting into %
 				 departing=(departing*100)/(cluster_points_indices.size());			//converting into %
 				 
-				 int dist_from_bottom_point=0;
-				 int avg_dist_from_bottom_point=0;
+				 printf("Approaching: %d Departing:%d\n", approaching, departing);
+				 float dist_from_bottom_point=0;
+				 float avg_dist_from_bottom_point=0;
 				 
 				 if(approaching >= THRESHOLD_FOR_CLASSIFYING_APPROACHING_OBJECTS)     // if cluster is approaching
 				 {
@@ -271,10 +284,11 @@ int main( int argc, char** argv )
 			 }
 			 
 			 // finding cluster npo wih minimum distance from bottom point
-			 float min_dist=cluster_dist_from_bottom_point.at(0);
-			 int min_cluster_no=0;
+			 float min_dist=INT_MAX;
+			 int min_cluster_no=-1;
 			 for(int i=0;i<cluster_dist_from_bottom_point.size();i++){
-				 if(cluster_dist_from_bottom_point.at(i) < min_dist){
+			 	printf("Cluster: %d dist: %f\n", i, cluster_dist_from_bottom_point.at(i));
+				 if(cluster_dist_from_bottom_point.at(i)!=0 && cluster_dist_from_bottom_point.at(i) < min_dist){
 					 min_dist=cluster_dist_from_bottom_point.at(i);
 					min_cluster_no = i;
 				 }
@@ -305,6 +319,7 @@ int main( int argc, char** argv )
 
 		}
 				foreground_motion_vectors_points.clear();
+				foreground_motion_vectors_points_old.clear();
 				foreground_motion_vectors_angles.clear();
 				cluster_dist_from_bottom_point.clear();
 				cluster_points_indices.clear();
